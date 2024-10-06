@@ -2,7 +2,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-
+// cd /mnt/c/Users/surya/IdeaProjects/codecrafters-sqlite-java
 public class Main {
   public static void main(String[] args){
     if (args.length < 2) {
@@ -28,7 +28,7 @@ public class Main {
           System.out.println("Logs from your program will appear here!");
 
           // Uncomment this block to pass the first stage
-          // System.out.println("database page size: " + pageSize);
+           System.out.println("database page size: " + pageSize);
         } catch (IOException e) {
           System.out.println("Error reading file: " + e.getMessage());
         }
