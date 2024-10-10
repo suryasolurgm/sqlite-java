@@ -24,11 +24,18 @@ public class Main {
           short pageSizeSigned = ByteBuffer.wrap(pageSizeBytes).getShort();
           int pageSize = Short.toUnsignedInt(pageSizeSigned);
 
+          // Read the number of cells from the sqlite_schema page header
+          databaseFile.skip(100 - 18);// Skip to the start of the sqlite_schema page header
+          databaseFile.skip(3);
+          byte[] cellCountBytes = new byte[2]; // The cell count is a 2-byte big-endian value
+          databaseFile.read(cellCountBytes);
+          int cellCount = ByteBuffer.wrap(cellCountBytes).getShort();
           // You can use print statements as follows for debugging, they'll be visible when running tests.
           System.out.println("Logs from your program will appear here!");
 
           // Uncomment this block to pass the first stage
            System.out.println("database page size: " + pageSize);
+           System.out.println("number of tables: " + cellCount);
         } catch (IOException e) {
           System.out.println("Error reading file: " + e.getMessage());
         }
