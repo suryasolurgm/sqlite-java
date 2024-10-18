@@ -16,7 +16,7 @@ public class Main {
     String databaseFilePath = args[0];
     String command = args[1];
 
-    switch (command) {
+    switch (command.split(" ")[0]) {
       case ".dbinfo" -> {
         try {
           FileInputStream databaseFile = new FileInputStream(new File(databaseFilePath));
@@ -57,9 +57,80 @@ public class Main {
           System.out.println("Error reading file: " + e.getMessage());
         }
       }
+      case "select" -> {
+        if (command.startsWith("select count(*) from")) {
+          String tableName = command.split(" ")[3];
+          try (FileInputStream databaseFile = new FileInputStream(new File(databaseFilePath))) {
+            int pageSize = readPageSize(databaseFile);
+            int rootPage = findRootPage(databaseFile, pageSize, tableName);
+            int rowCount = countRowsInTable(databaseFile, pageSize, rootPage);
+            System.out.println(rowCount);
+          } catch (IOException e) {
+            System.out.println("Error reading file: " + e.getMessage());
+          }
+        } else {
+          System.out.println("Invalid command: " + command);
+        }
+      }
       default -> System.out.println("Missing or invalid command passed: " + command);
     }
   }
+  private static int countRowsInTable(FileInputStream file, int pageSize, int rootPage) throws IOException {
+    file.getChannel().position((rootPage - 1) * pageSize);
+    file.skip(3);
+    byte[] cellCountBytes = new byte[2];
+    file.read(cellCountBytes);
+    return ByteBuffer.wrap(cellCountBytes).getShort();
+  }
+  private static int findRootPage(FileInputStream file, int pageSize, String tableName) throws IOException {
+    file.getChannel().position(0); // Reset to the beginning of the file
+    file.skip(100); // Skip to the start of the sqlite_schema page
+    file.skip(3); // Skip to the cell count bytes
+    int cellCount = readCellCount(file);
+    file.skip(3); // Skip to the cell pointer array
+
+    List<Integer> cellOffsets = readCellOffsets(file, cellCount);
+
+    for (int offset : cellOffsets) {
+      file.getChannel().position(offset);
+
+      int payloadSize = readVarint(file);
+      readVarint(file); // Skip rowid
+
+      int headerSize = readVarint(file);
+      List<Integer> serialTypes = new ArrayList<>();
+      int bytesRead = 0;
+      while (bytesRead < headerSize - 1) {
+        int serialType = readVarint(file);
+        serialTypes.add(serialType);
+        bytesRead += getVarintSize(serialType);
+      }
+
+      // Read type (1st column)
+      int typeSize = getSerialTypeSize(serialTypes.get(0));
+      file.skip(typeSize);
+
+      // Read name (2nd column)
+      int nameSize = getSerialTypeSize(serialTypes.get(1));
+      byte[] nameBytes = new byte[nameSize];
+      file.read(nameBytes);
+      String name = new String(nameBytes);
+
+      // If name matches, read rootpage (4th column)
+      if (name.equals(tableName)) {
+        // Skip tbl_name (3rd column)
+        int tblNameSize = getSerialTypeSize(serialTypes.get(2));
+        file.skip(tblNameSize);
+
+        // Read rootpage (4th column)
+        int rootpage = readVarint(file);
+        return rootpage;
+      }
+    }
+
+    throw new IOException("Table not found: " + tableName);
+  }
+
   private static int readPageSize(FileInputStream file) throws IOException {
     file.skip(16);
     byte[] pageSizeBytes = new byte[2];
@@ -75,10 +146,10 @@ public class Main {
 
   private static List<String> readTableNames(FileInputStream file, int pageSize) throws IOException {
     file.skip(100 - 18);
-    file.skip(3);
+    file.skip(3);//skip to cell count bytes
     int cellCount = readCellCount(file);
     System.out.println("cellCount: " + cellCount);
-    file.skip(3);
+    file.skip(3);//skip to cell pointer array
 
     List<Integer> cellOffsets = readCellOffsets(file, cellCount);
     List<String> tableNames = new ArrayList<>();
@@ -99,7 +170,7 @@ public class Main {
       byte[] offsetBytes = new byte[2];
       file.read(offsetBytes);
       offsets.add(Short.toUnsignedInt(ByteBuffer.wrap(offsetBytes).getShort()));
-      System.out.println(offsets.get(i));
+      //System.out.println(offsets.get(i));
     }
     return offsets;
   }
