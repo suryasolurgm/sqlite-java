@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class CommandExecutor {
@@ -46,13 +47,16 @@ public class CommandExecutor {
         // Get table data
         int rootPage = schemaReader.findRootPage(query.tableName());
         List<Record> records = tableReader.readTableRows(rootPage);
-
+        //System.out.println("size of record"+records.size());
         // Output requested columns
         for (Record record : records) {
+            List<String> values = new ArrayList<>();
             for (String columnName : query.columns()) {
                 int columnIndex = schema.getColumnIndex(columnName);
-                System.out.println(record.getColumnData(columnIndex));
+                //System.out.println(record.getColumnData(columnIndex));
+                values.add(record.getColumnData(columnIndex).toString());
             }
+            System.out.println(String.join("|", values));
         }
     }
     private void executeDbInfo() throws IOException {
