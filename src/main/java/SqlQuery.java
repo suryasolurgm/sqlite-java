@@ -29,7 +29,7 @@ public record SqlQuery(
 //            if (columnsStr.toLowerCase().equals("count(*)")) {
 //                columns.add("count(*)");
 //            } else {
-//                columns = Arrays.asList(columnsStr.split(",\\s*"));
+//                columns = Arrays.asList(columnsStr.split(",\\s*"))
 //            }
             columns = Arrays.asList(columnsStr.split(",\\s*"));
             String tableName = parts[fromIndex + 1];
