@@ -1,6 +1,7 @@
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class CommandExecutor {
     private final DatabaseFile databaseFile;
@@ -47,7 +48,10 @@ public class CommandExecutor {
         // Get table data
         int rootPage = schemaReader.findRootPage(query.tableName());
         List<Record> records = tableReader.readTableRows(rootPage);
-        //System.out.println("size of record"+records.size());
+        if (!query.conditions().isEmpty()) {
+            records = filterRecords(records, query.conditions().get(0), schema);
+        }
+       // System.out.println("size of record"+records.size());
         // Output requested columns
         for (Record record : records) {
             List<String> values = new ArrayList<>();
@@ -58,6 +62,18 @@ public class CommandExecutor {
             }
             System.out.println(String.join("|", values));
         }
+    }
+    private List<Record> filterRecords(List<Record> records, String condition, TableSchema schema) {
+    // Parse condition (e.g., "color = 'Yellow'")
+        String[] parts = condition.split("\\s*=\\s*");
+        String columnName = parts[0];
+        String value = parts[1].replace("'", ""); // Remove quotes
+    
+        int columnIndex = schema.getColumnIndex(columnName);
+    
+        return records.stream()
+        .filter(record -> record.getColumnData(columnIndex).toString().equals(value))
+        .collect(Collectors.toList());
     }
     private void executeDbInfo() throws IOException {
         int tableCount = schemaReader.getTableCount();
